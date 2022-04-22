@@ -1,0 +1,27 @@
+{
+  "name": "axe_ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node index.js"
+  },
+  "author": "night.",
+  "license": "ISC",
+  "dependencies": {
+    "@discordx/importer": "^1.1.2",
+    "@discordx/pagination": "^2.1.1",
+    "discord.js": "^13.6.0",
+    "discordx": "^9.5.2",
+    "fs": "^0.0.1-security",
+    "mongodb": "^4.5.0",
+    "reflect-metadata": "^0.1.13",
+    "webpack": "^5.72.0"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.25",
+    "typescript": "^4.6.3"
+  },
+  "type": "module"
+}
