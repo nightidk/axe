@@ -87,12 +87,9 @@ async function run() {
 
   // The following syntax should be used in the ECMAScript environment
   const commands = readdirSync("./commands");
-  console.log(commands);
   for (var i = 0; i < commands.length; i++) {
     if (commands[i]?.endsWith(".js")) {
-      var command = "./commands/" + commands[i] || "";
-      console.log(command);
-      await importx(command);
+      await importx("./commands/" + commands[i] || "");
     }
   }
   
