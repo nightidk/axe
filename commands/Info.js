@@ -46,7 +46,7 @@ let InfoCommands = class InfoCommands {
         e.setColor(0x2f3136);
         e.setAuthor({ "name": "Информация" });
         e.setTimestamp(new Date());
-        e.setFooter({ "text": command.message.author.username, "iconURL": `${command.message.author.avatarURL()}` });
+        e.setFooter({ text: command.message.member?.nickname || command.message.author.username, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
         e.addFields({ "name": "```Языки```", "value": "```TypeScript, JavaScript```", "inline": false }, { "name": "```Автор```", "value": `\`\`\`${owner?.user.username}#${owner?.user.discriminator}\`\`\``, "inline": true }, { "name": "```Префикс```", "value": `\`\`\`${config.PREFIX}\`\`\``, "inline": true }, { "name": "```Загрузка памяти```", "value": `\`\`\`${Math.round(memory.rss / 1024 / 1024 * 100) / 100}Mb/${Math.round(os.totalmem() / 1024 / 1024 * 100) / 100}Mb\nПроцент: ${usage.toFixed(2)}%\`\`\``, "inline": true }, { "name": "```Система```", "value": `\`\`\`${os.platform()}\`\`\``, "inline": true }, { "name": "```Пинг```", "value": `\`\`\`${parseInt((Date.now() / 1000).toFixed(0)) - parseInt((command.message.createdTimestamp / 1000).toFixed(0))}\`\`\``, "inline": true }, { "name": "```Время работы```", "value": `\`\`\`${seconds_to_hh_mm_ss(parseInt(process.uptime().toFixed(0)))}\`\`\``, "inline": true });
         command.message.channel.send({ "embeds": [e] });
     }

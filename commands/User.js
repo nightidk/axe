@@ -1,5 +1,5 @@
 import { __decorate, __metadata, __param } from "tslib";
-import { MessageEmbed } from "discord.js";
+import { MessageEmbed, MessageButton, MessageActionRow } from "discord.js";
 import { SimpleCommandMessage } from "discordx";
 import { Discord, SimpleCommand, SimpleCommandOption, SimpleCommandOptionType, } from "discordx";
 import { MongoClient } from "mongodb";
@@ -8,6 +8,38 @@ const configRead = readFileSync("./config.json", 'utf8');
 const config = JSON.parse(configRead);
 const DB_LOG = config.DB;
 const mongoClient = new MongoClient(DB_LOG);
+function fixZeroNumber(value) {
+    return `${value}`.length == 1 ? "0" + value : "" + value;
+}
+;
+function strftime(time, options) {
+    const milliseconds = time.getMilliseconds();
+    const seconds = time.getSeconds();
+    const minutes = time.getMinutes();
+    const hours = time.getHours();
+    const day = time.getDate();
+    const month = time.getMonth();
+    const year = time.getFullYear();
+    const monthsnames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    if (options?.format) {
+        var formatString = options.format;
+        formatString = formatString.replaceAll("%ms", `${milliseconds}`);
+        formatString = formatString.replaceAll("%S", `${fixZeroNumber(seconds)}`);
+        formatString = formatString.replaceAll("%M", `${fixZeroNumber(minutes)}`);
+        formatString = formatString.replaceAll("%H", `${fixZeroNumber(hours)}`);
+        formatString = formatString.replaceAll("%d", `${fixZeroNumber(day)}`);
+        formatString = formatString.replaceAll("%m", `${fixZeroNumber(month)}`);
+        formatString = formatString.replaceAll("%mn", `${monthsnames[month - 1]}`);
+        formatString = formatString.replaceAll("%Y", `${year}`);
+        formatString = formatString.replaceAll("%y", `${year.toString().substring(3, 4)}`);
+        return formatString;
+    }
+    else {
+        return `${hours}:${minutes}:${seconds} ${monthsnames[month - 1]} ${day}, ${year}`;
+    }
+}
 function lvl_line(exp, nexp) {
     var procents = parseInt((exp / nexp * 100).toFixed(0)) || 0;
     var bar = 0;
@@ -138,9 +170,6 @@ function divmod(value, del) {
     }
     return [new_value, last_value];
 }
-function fixZeroNumber(value) {
-    return `${value}`.length == 1 ? "0" + value : "" + value;
-}
 function seconds_to_hh_mm_ss(seconds) {
     /* Convert seconds to d hh:mm:ss */
     if (seconds === null) {
@@ -176,14 +205,19 @@ let UserCommands = class UserCommands {
             }
             var embed = new MessageEmbed();
             embed.setColor(0x2f3136);
-            embed.setFooter({ "text": `${command.message.member?.nickname}`, "iconURL": command.message.author.avatarURL() || undefined });
+            embed.setFooter({ text: `${command.message.member?.nickname || command.message.author.username} | ${command.message.author.id}`, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
             embed.setTimestamp(new Date());
-            embed.setThumbnail(user?.user.avatarURL() || "");
+            embed.setThumbnail(user?.avatarURL({ dynamic: true, format: "png" }) || user?.user.avatarURL({ dynamic: true, format: "png" }) || "");
             embed.setAuthor({ "name": `Профиль • ${user?.user.username}` });
             const result = await collection.findOne({ id: `${user?.id}` }) || null;
             const level = result?.level;
             if (level < 25) {
-                user?.roles.add("911619617259130880");
+                try {
+                    user?.roles.add("911619617259130880");
+                }
+                catch (e) {
+                    console.log(e);
+                }
             }
             var partner = result?.partner;
             if (partner == "") {
@@ -205,7 +239,15 @@ let UserCommands = class UserCommands {
                 { name: 'Брак', value: `\`\`\`diff\n- ${partner}\n\`\`\``, inline: true },
                 { name: 'Длительность брака', value: `\`\`\`glsl\n${seconds_to_hh_mm_ss(marry_time)}\n\`\`\``, inline: true }
             ]);
-            command.message.reply({ embeds: [embed] });
+            const helloBtn = new MessageButton()
+                .setLabel("Достижения")
+                .setStyle("SUCCESS")
+                .setCustomId("profile-achievements");
+            const row = new MessageActionRow().addComponents(helloBtn);
+            if (user?.user.id == command.message.author.id)
+                command.message.reply({ embeds: [embed], components: [row] });
+            else
+                command.message.reply({ embeds: [embed] });
         }
         catch (err) {
             console.log(err);
@@ -213,6 +255,39 @@ let UserCommands = class UserCommands {
         finally {
             await mongoClient.close();
         }
+    }
+    async avatar(user, command) {
+        if (!user) {
+            user = command.message.member || undefined;
+        }
+        const embed = new MessageEmbed();
+        embed.setColor(0x2f3136);
+        embed.setTitle(`Аватар ${user?.user.username}#${user?.user.discriminator}`);
+        embed.setImage(user?.avatarURL({ size: 2048, dynamic: true, format: "png" }) || user?.user.avatarURL({ size: 2048, dynamic: true, format: "png" }) || "");
+        embed.setTimestamp(new Date());
+        embed.setFooter({ text: command.message.member?.nickname || command.message.author.username, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
+        await command.message.channel.send({ embeds: [embed] });
+    }
+    async userinfo(user, command) {
+        if (!user) {
+            user = command.message.member || undefined;
+        }
+        const embed = new MessageEmbed();
+        embed.setColor(0x2f3136);
+        embed.setTitle(`Информация о пользователе ${user?.user.username}#${user?.user.discriminator}`);
+        embed.setThumbnail(user?.avatarURL({ dynamic: true, format: "png" }) || user?.user.avatarURL({ dynamic: true, format: "png" }) || "");
+        embed.setTimestamp(new Date());
+        embed.setFooter({ text: command.message.member?.nickname || command.message.author.username, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
+        embed.addFields([
+            { name: 'ID', value: `${user?.id}`, inline: true },
+            { name: 'Имя', value: `${user?.user.username}`, inline: true },
+            { name: 'Ник на сервере', value: `${user?.nickname || user?.user.username}`, inline: true },
+            { name: 'Дискриминатор', value: `${user?.user.discriminator}`, inline: true },
+            { name: 'Присоединился к серверу', value: `${strftime(user?.joinedAt || new Date(), { format: "%d.%m.%Y %H:%M:%S" })}`, inline: true },
+            { name: 'Присоединился к Discord', value: `${strftime(user?.user.createdAt || new Date(), { format: "%d.%m.%Y %H:%M:%S" })}`, inline: true },
+            { name: `Роли (${(user?.roles?.cache.map((r) => r).length || 0) - 1})`, value: `${user?.roles?.cache.filter((r) => r.id != command.message.guild?.id).map((r) => '<@&' + r.id + '>').join(' ')}`, inline: true }
+        ]);
+        await command.message.channel.send({ embeds: [embed] });
     }
 };
 __decorate([
@@ -222,6 +297,20 @@ __decorate([
     __metadata("design:paramtypes", [Object, SimpleCommandMessage]),
     __metadata("design:returntype", Promise)
 ], UserCommands.prototype, "profile", null);
+__decorate([
+    SimpleCommand("avatar", { aliases: ['av'], directMessage: false }),
+    __param(0, SimpleCommandOption("user", { type: SimpleCommandOptionType.User })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, SimpleCommandMessage]),
+    __metadata("design:returntype", Promise)
+], UserCommands.prototype, "avatar", null);
+__decorate([
+    SimpleCommand("userinfo", { aliases: ['ui'], directMessage: false }),
+    __param(0, SimpleCommandOption("user", { type: SimpleCommandOptionType.User })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, SimpleCommandMessage]),
+    __metadata("design:returntype", Promise)
+], UserCommands.prototype, "userinfo", null);
 UserCommands = __decorate([
     Discord()
 ], UserCommands);

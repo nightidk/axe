@@ -1,4 +1,4 @@
-import { CommandInteraction, Message, GuildMember, MessageEmbed } from "discord.js";
+import { CommandInteraction, Message, GuildMember, MessageEmbed, MessageButton, MessageActionRow, ButtonInteraction } from "discord.js";
 import { Bot, SimpleCommandMessage } from "discordx";
 import {
   Discord,
@@ -26,11 +26,11 @@ function divmod(value: number, del: number) {
     return [new_value, last_value];
   }
   
-  function fixZeroNumber(value: number | string) {
+function fixZeroNumber(value: number | string) {
     return `${value}`.length == 1 ? "0" + value : "" + value; 
   }
   
-  function seconds_to_hh_mm_ss(seconds: number | null) {
+function seconds_to_hh_mm_ss(seconds: number | null) {
       /* Convert seconds to d hh:mm:ss */
       if (seconds === null) {
         return "Не найдено.";
@@ -63,7 +63,7 @@ export class InfoCommands {
         e.setColor(0x2f3136);
         e.setAuthor({ "name": "Информация" })
         e.setTimestamp(new Date());
-        e.setFooter({ "text": command.message.author.username, "iconURL": `${command.message.author.avatarURL()}` });
+        e.setFooter({ text: command.message.member?.nickname || command.message.author.username, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
         e.addFields({ "name": "```Языки```", "value": "```TypeScript, JavaScript```", "inline": false }, 
         { "name": "```Автор```", "value": `\`\`\`${owner?.user.username}#${owner?.user.discriminator}\`\`\``, "inline": true },
         { "name": "```Префикс```", "value": `\`\`\`${config.PREFIX}\`\`\``, "inline": true },
@@ -73,5 +73,6 @@ export class InfoCommands {
         { "name": "```Время работы```", "value": `\`\`\`${seconds_to_hh_mm_ss(parseInt(process.uptime().toFixed(0)))}\`\`\``, "inline": true })
         command.message.channel.send({ "embeds": [e] })
     }
+
 
 }

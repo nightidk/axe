@@ -1,5 +1,5 @@
-import { CommandInteraction, Message, GuildMember, MessageEmbed } from "discord.js";
-import { Bot, SimpleCommandMessage } from "discordx";
+import { CommandInteraction, Message, GuildMember, MessageEmbed, MessageButton, MessageActionRow } from "discord.js";
+import { Bot, ContextMenu, SimpleCommandMessage } from "discordx";
 import {
   Discord,
   SimpleCommand,
@@ -11,10 +11,48 @@ import {
 import { MongoClient } from "mongodb";
 import { readFileSync } from "fs";
 
+
 const configRead = readFileSync("./config.json", 'utf8');
 const config = JSON.parse(configRead);
 const DB_LOG = config.DB;
 const mongoClient = new MongoClient(DB_LOG);
+
+function fixZeroNumber(value: number | string) {
+  return `${value}`.length == 1 ? "0" + value : "" + value; 
+}
+
+interface strftimeOptions {
+  format?: string
+};
+
+function strftime(time: Date, options?: strftimeOptions ) {
+  const milliseconds = time.getMilliseconds();
+  const seconds = time.getSeconds();
+  const minutes = time.getMinutes();
+  const hours = time.getHours();
+  const day = time.getDate();
+  const month = time.getMonth();
+  const year = time.getFullYear();
+  const monthsnames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ]
+
+  if (options?.format) {
+    var formatString = options.format;
+    formatString = formatString.replaceAll("%ms", `${milliseconds}`);
+    formatString = formatString.replaceAll("%S", `${fixZeroNumber(seconds)}`);
+    formatString = formatString.replaceAll("%M", `${fixZeroNumber(minutes)}`);
+    formatString = formatString.replaceAll("%H", `${fixZeroNumber(hours)}`);
+    formatString = formatString.replaceAll("%d", `${fixZeroNumber(day)}`);
+    formatString = formatString.replaceAll("%m", `${fixZeroNumber(month)}`);
+    formatString = formatString.replaceAll("%mn", `${monthsnames[month-1]}`);
+    formatString = formatString.replaceAll("%Y", `${year}`);
+    formatString = formatString.replaceAll("%y", `${year.toString().substring(3, 4)}`);
+    return formatString;
+  } else {
+    return `${hours}:${minutes}:${seconds} ${monthsnames[month-1]} ${day}, ${year}`
+  }
+}
 
 function lvl_line(exp: number, nexp: number) {
     var procents = parseInt((exp / nexp * 100).toFixed(0)) || 0;
@@ -112,19 +150,12 @@ function rank(level: number) {
 }
 
 function divmod(value: number, del: number) {
-  var last_value = value;
-  var new_value = 0;
+    
+  var quotient = Math.floor(value/del);
+  var remainder = value % del;
 
-  while (last_value >= del) {
-    last_value /= del;
-    new_value += 1;
-  }
   
-  return [new_value, last_value];
-}
-
-function fixZeroNumber(value: number | string) {
-  return `${value}`.length == 1 ? "0" + value : "" + value; 
+  return [quotient, remainder];
 }
 
 function seconds_to_hh_mm_ss(seconds: number | null) {
@@ -133,13 +164,13 @@ function seconds_to_hh_mm_ss(seconds: number | null) {
       return "Не найдено.";
     }
     var time_m_s = divmod(seconds, 60)
-    var time_h_m = divmod(time_m_s[0] || 0, 60)
-    var time_d_h = divmod(time_h_m[0] || 0, 24)
+    var time_h_m = divmod((time_m_s[0] || 0), 60)
+    var time_d_h = divmod((time_h_m[0] || 0), 24)
 
-    const d = time_d_h[0]?.toFixed(0) || 0;
-    const h = time_d_h[1]?.toFixed(0) || 0;
-    const m = time_h_m[1]?.toFixed(0) || 0;
-    const s = time_m_s[1]?.toFixed(0) || 0;
+    const d = time_d_h[0] || 0;
+    const h = time_d_h[1] || 0;
+    const m = time_h_m[1] || 0;
+    const s = time_m_s[1] || 0;
 
     if (seconds >= 86400) {
         return `${d}дн. ${fixZeroNumber(h)}:${fixZeroNumber(m)}:${fixZeroNumber(s)}`;
@@ -170,14 +201,18 @@ export class UserCommands {
       }
       var embed = new MessageEmbed();
       embed.setColor(0x2f3136);
-      embed.setFooter({ "text": `${command.message.member?.nickname}`, "iconURL": command.message.author.avatarURL() || undefined });
+      embed.setFooter({ text: `${command.message.member?.nickname || command.message.author.username} | ${command.message.author.id}`, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
       embed.setTimestamp(new Date());
-      embed.setThumbnail(user?.user.avatarURL() || "");
+      embed.setThumbnail(user?.avatarURL({ dynamic: true, format: "png" }) || user?.user.avatarURL({ dynamic: true, format: "png" }) || "");
       embed.setAuthor({ "name": `Профиль • ${user?.user.username}` })
       const result = await collection.findOne({ id: `${user?.id}` }) || null;
       const level = result?.level;
       if (level < 25) {
-        user?.roles.add("911619617259130880");
+        try {
+          user?.roles.add("911619617259130880");
+        } catch (e) {
+          console.log(e);
+        }
       } 
       var partner = result?.partner;
       if (partner == "") {
@@ -195,13 +230,71 @@ export class UserCommands {
         { name: 'Брак', value: `\`\`\`diff\n- ${partner}\n\`\`\``, inline: true },
         { name: 'Длительность брака', value: `\`\`\`glsl\n${seconds_to_hh_mm_ss(marry_time)}\n\`\`\``, inline: true }
       ]);
-      
-      command.message.reply({ embeds: [embed] });
+      const helloBtn = new MessageButton()
+        .setLabel("Достижения")
+        .setStyle("SUCCESS")
+        .setCustomId("profile-achievements");
+
+      const row = new MessageActionRow().addComponents(helloBtn);
+      if (user?.user.id == command.message.author.id) command.message.reply({ embeds: [embed], components: [row] });
+      else command.message.reply({ embeds: [embed] });
     } catch (err) {
       console.log(err);
     } finally {
       await mongoClient.close();
     }
+  }
+
+  @SimpleCommand("avatar", { aliases: ['av'], directMessage: false })
+  async avatar(
+    @SimpleCommandOption("user", { type: SimpleCommandOptionType.User })
+    user: GuildMember | undefined,
+    command: SimpleCommandMessage
+  ) {
+
+    if (!user) {
+      user = command.message.member || undefined;
+    }
+
+    const embed = new MessageEmbed();
+    embed.setColor(0x2f3136);
+    embed.setTitle(`Аватар ${user?.user.username}#${user?.user.discriminator}`);
+    embed.setImage(user?.avatarURL({ size: 2048, dynamic: true, format: "png" }) || user?.user.avatarURL({ size: 2048, dynamic: true, format: "png" }) || "");
+    embed.setTimestamp(new Date());
+    embed.setFooter({ text: command.message.member?.nickname || command.message.author.username, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
+    await command.message.channel.send({ embeds: [embed] });
+
+  }
+
+  @SimpleCommand("userinfo", { aliases: ['ui'], directMessage: false })
+  async userinfo(
+    @SimpleCommandOption("user", { type: SimpleCommandOptionType.User })
+    user: GuildMember | undefined,
+    command: SimpleCommandMessage
+  ) {
+
+    if (!user) {
+      user = command.message.member || undefined;
+    }
+
+    const embed = new MessageEmbed();
+    embed.setColor(0x2f3136);
+    embed.setTitle(`Информация о пользователе ${user?.user.username}#${user?.user.discriminator}`);
+    embed.setThumbnail(user?.avatarURL({ dynamic: true, format: "png" }) || user?.user.avatarURL({ dynamic: true, format: "png" }) || "");
+    embed.setTimestamp(new Date());
+    embed.setFooter({ text: command.message.member?.nickname || command.message.author.username, iconURL: command.message.member?.avatarURL({ dynamic: true }) || command.message.author.avatarURL({ dynamic: true }) || "" });
+    embed.addFields([
+      { name: 'ID', value: `${user?.id}`, inline: true },
+      { name: 'Имя', value: `${user?.user.username}`, inline: true },
+      { name: 'Ник на сервере', value: `${user?.nickname || user?.user.username}`, inline: true },
+      { name: 'Дискриминатор', value: `${user?.user.discriminator}`, inline: true },
+      { name: 'Присоединился к серверу', value: `${strftime(user?.joinedAt || new Date(), { format: "%d.%m.%Y %H:%M:%S" })}`, inline: true },
+      { name: 'Присоединился к Discord', value: `${strftime(user?.user.createdAt || new Date(), { format: "%d.%m.%Y %H:%M:%S" })}`, inline: true },
+      { name: `Роли (${(user?.roles?.cache.map((r) => r).length || 0) - 1})`, value: `${user?.roles?.cache.filter((r) => r.id != command.message.guild?.id).map((r) => '<@&' + r.id + '>').join(' ')}`, inline: true }
+    ])
+
+    await command.message.channel.send({ embeds: [embed] });
+
   }
 
 }

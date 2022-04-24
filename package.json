@@ -10,13 +10,18 @@
   "author": "night.",
   "license": "ISC",
   "dependencies": {
+    "@angular/common": "^13.3.4",
+    "@angular/compiler": "^13.3.4",
     "@discordx/importer": "^1.1.2",
     "@discordx/pagination": "^2.1.1",
+    "@types/strftime": "^0.9.4",
     "discord.js": "^13.6.0",
     "discordx": "^9.5.2",
     "fs": "^0.0.1-security",
+    "moment": "^2.29.3",
     "mongodb": "^4.5.0",
     "reflect-metadata": "^0.1.13",
+    "strftime": "^0.10.1",
     "webpack": "^5.72.0"
   },
   "devDependencies": {

@@ -77,7 +77,7 @@ bot.on("interactionCreate", (interaction: Interaction) => {
 });
 
 bot.on("messageCreate", (message: Message) => {
-  bot.executeCommand(message);
+  bot.executeCommand(message, { caseSensitive: false });
 });
 
 async function run() {
@@ -90,6 +90,13 @@ async function run() {
   for (var i = 0; i < commands.length; i++) {
     if (commands[i]?.endsWith(".js")) {
       await importx("./commands/" + commands[i] || "");
+    }
+  }
+
+  const events = readdirSync("./events");
+  for (var i = 0; i < events.length; i++) {
+    if (events[i]?.endsWith(".js")) {
+      await importx("./events/" + events[i] || "");
     }
   }
   
